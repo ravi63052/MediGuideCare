@@ -11,13 +11,15 @@ import {
   resetPassword,
   uploadProfilePhoto,
   updateProfile,
-  verifyEmail,
+  verifyLoginOtp,
+  verifyRegistrationOtp,
 } from "../controllers/authController.js";
 import { requireAuth } from "../middleware/requireAuth.js";
 import { profilePhotoUpload } from "../middleware/profilePhotoUpload.js";
 import {
   authRateLimiter,
-  emailVerificationRequestRateLimiter,
+  emailOtpRequestRateLimiter,
+  emailOtpVerificationRateLimiter,
   passwordResetCompletionRateLimiter,
   passwordResetRequestRateLimiter,
 } from "../middleware/rateLimiters.js";
@@ -27,7 +29,7 @@ import {
   registerSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
-  verifyEmailSchema,
+  emailOtpSchema,
   validateBody,
 } from "../validators/authValidator.js";
 
@@ -35,13 +37,24 @@ const router = express.Router();
 
 router.post(
   "/register",
-  emailVerificationRequestRateLimiter,
+  emailOtpRequestRateLimiter,
   authRateLimiter,
   validateBody(registerSchema),
   register,
 );
-router.post("/verify-email", validateBody(verifyEmailSchema), verifyEmail);
-router.post("/login", authRateLimiter, validateBody(loginSchema), login);
+router.post(
+  "/verify-registration-otp",
+  emailOtpVerificationRateLimiter,
+  validateBody(emailOtpSchema),
+  verifyRegistrationOtp,
+);
+router.post("/login", emailOtpRequestRateLimiter, authRateLimiter, validateBody(loginSchema), login);
+router.post(
+  "/verify-login-otp",
+  emailOtpVerificationRateLimiter,
+  validateBody(emailOtpSchema),
+  verifyLoginOtp,
+);
 router.post("/forgot-password", passwordResetRequestRateLimiter, validateBody(forgotPasswordSchema), requestPasswordReset);
 router.post("/reset-password", passwordResetCompletionRateLimiter, validateBody(resetPasswordSchema), resetPassword);
 router.get("/me", requireAuth, currentUser);

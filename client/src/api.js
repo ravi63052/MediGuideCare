@@ -155,8 +155,16 @@ export const requestPasswordReset = (email) =>
   request('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) })
 export const completePasswordReset = (data) =>
   request('/auth/reset-password', { method: 'POST', body: JSON.stringify(data) })
-export const verifyEmailAddress = (token) =>
-  request('/auth/verify-email', { method: 'POST', body: JSON.stringify({ token }) })
+export const verifyRegistrationOtp = (email, code) =>
+  request('/auth/verify-registration-otp', {
+    method: 'POST',
+    body: JSON.stringify({ email, code }),
+  })
+export const verifyLoginOtp = (email, code) =>
+  request('/auth/verify-login-otp', {
+    method: 'POST',
+    body: JSON.stringify({ email, code }),
+  })
 export const getCurrentUser = () => request('/auth/me')
 export const logoutUser = () => request('/auth/logout', { method: 'POST' })
 export const updateUserProfile = (data) =>

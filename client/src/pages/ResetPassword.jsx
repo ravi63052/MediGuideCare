@@ -2,7 +2,9 @@ import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 
 import { LockIcon, LogoMark } from '../components/icons.jsx'
+import PasswordRequirements from '../components/PasswordRequirements.jsx'
 import { completePasswordReset } from '../api.js'
+import { isPasswordValid } from '../utils/passwordRules.js'
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams()
@@ -18,6 +20,7 @@ export default function ResetPassword() {
     event.preventDefault()
     setError('')
     if (password !== confirmation) return setError('The passwords do not match.')
+    if (!isPasswordValid(password)) return setError('Meet all password requirements before continuing.')
     if (new TextEncoder().encode(password).length > 72) return setError('Password must contain no more than 72 UTF-8 bytes.')
     setIsSubmitting(true)
     try {
@@ -43,13 +46,13 @@ export default function ResetPassword() {
           <span className="mt-5 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-50 text-brand-700 lg:mt-0"><LockIcon className="h-6 w-6" /></span>
           <p className="mt-6 text-sm font-bold uppercase tracking-widest text-brand-600">Account recovery</p>
           <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-900">Reset your password</h2>
-          <p className="mt-3 text-sm leading-relaxed text-slate-500">Choose a new password with at least 8 characters.</p>
+          <p className="mt-3 text-sm leading-relaxed text-slate-500">Choose a strong new password that meets all the requirements below.</p>
           {error && <div role="alert" className="mt-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">{error}</div>}
           {message ? <div role="status" className="mt-7 rounded-xl border border-blue-200 bg-blue-50 px-4 py-4 text-sm text-blue-900">{message}</div> : !token ? (
             <div role="alert" className="mt-7 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">This reset link is missing or invalid. Request a new one below.</div>
           ) : (
             <form onSubmit={handleSubmit} className="mt-7 space-y-5">
-              <div><div className="mb-1.5 flex items-center justify-between gap-3"><label htmlFor="new-password" className="text-sm font-semibold text-slate-700">New password</label><button type="button" aria-pressed={showPassword} onClick={() => setShowPassword((value) => !value)} className="text-xs font-semibold text-brand-700 hover:text-brand-800">{showPassword ? 'Hide' : 'Show'} password</button></div><input id="new-password" type={showPassword ? 'text' : 'password'} autoComplete="new-password" minLength={8} maxLength={72} required value={password} onChange={(event) => setPassword(event.target.value)} className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100" /></div>
+              <div><div className="mb-1.5 flex items-center justify-between gap-3"><label htmlFor="new-password" className="text-sm font-semibold text-slate-700">New password</label><button type="button" aria-pressed={showPassword} onClick={() => setShowPassword((value) => !value)} className="text-xs font-semibold text-brand-700 hover:text-brand-800">{showPassword ? 'Hide' : 'Show'} password</button></div><input id="new-password" type={showPassword ? 'text' : 'password'} autoComplete="new-password" minLength={8} maxLength={72} required value={password} onChange={(event) => setPassword(event.target.value)} className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100" /><PasswordRequirements password={password} /></div>
               <div><label htmlFor="confirm-password" className="mb-1.5 block text-sm font-semibold text-slate-700">Confirm new password</label><input id="confirm-password" type={showPassword ? 'text' : 'password'} autoComplete="new-password" minLength={8} maxLength={72} required value={confirmation} onChange={(event) => setConfirmation(event.target.value)} className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100" /></div>
               <button type="submit" disabled={isSubmitting} className="btn-primary w-full py-3">{isSubmitting ? 'Updating…' : 'Update password'}</button>
             </form>

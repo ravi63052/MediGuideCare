@@ -17,7 +17,8 @@ per-user appointments, medicine lookup, map-based hospital search, and education
 
 ## Features
 
-- Email-verified registration, login, logout, session restoration, and single-use password-reset links
+- Email OTP-verified registration and two-step login, logout, session restoration, and single-use password-reset links
+- Registration and password-reset passwords require at least 8 characters, one uppercase letter, one number, and one special character
 - Public-only auth pages and protected workspace routes
 - Persistent, account-specific profile editing with optional profile photos and workspace avatars
 - Per-user appointment booking/cancellation with active-provider verification and a validated
@@ -64,7 +65,7 @@ records are clearly labelled if used during an outage. For a public deployment, 
 `HOSPITAL_DIRECTORY_USER_AGENT` to a value identifying the project and a contact, in line with
 Nominatim's usage policy.
 
-#### Required email verification and optional email notifications
+#### Email OTPs and optional email notifications
 
 Email is sent over an HTTPS API because hosts such as Render block outbound SMTP ports.
 Pick a provider with `EMAIL_PROVIDER` and configure the **root `.env`** (not the frontend
@@ -96,17 +97,18 @@ sender address (never the key itself). Misconfiguration is logged as a warning a
 every skipped send; nothing fails silently.
 
 Replace the placeholders with your own values. `MAIL_FROM` must be a sender on the verified domain;
-it cannot be an arbitrary user's email address. `APP_URL` is the public frontend origin used in
-email-verification, password-reset, and appointment-reminder links. New accounts remain inactive
-until the user opens the verification email and confirms the link; registration does not create a
-login session before confirmation. Verification links expire after 24 hours. If `APP_URL` is omitted,
-the API uses the first valid origin in `CLIENT_ORIGIN` (or `CLIENT_URL`). Set `APP_URL` explicitly
+it cannot be an arbitrary user's email address. Registration sends a six-digit code that expires
+after 10 minutes; the account remains inactive until that code is confirmed. Each login requires the
+email/password followed by a six-digit email code, also expiring after 10 minutes. Codes are single
+use, stored as bcrypt hashes, and rate-limited. `APP_URL` is only needed for password-reset and
+appointment-reminder links; OTP emails do not use it. If `APP_URL` is omitted, the API uses the
+first valid origin in `CLIENT_ORIGIN` (or `CLIENT_URL`) for those links. Set `APP_URL` explicitly
 when the browser origin differs from the CORS origin. Restart the API after changing `.env`.
 
-Email verification, password resets, and reminders require the selected provider's API key,
-`MAIL_FROM`, and `APP_URL` or a valid frontend-origin fallback. Registration is unavailable when
-verification email delivery is not configured or the provider does not accept the message. An
-accepted email is not proof that the mailbox exists; only opening the link activates the account.
+OTP delivery requires the selected provider's API key and `MAIL_FROM`. Password resets and
+reminders also require `APP_URL` or a valid frontend-origin fallback. Registration and login OTP
+are unavailable when email delivery is not configured or the provider does not accept the message.
+An accepted email is not proof that the mailbox exists; only entering the code activates an account.
 The API never substitutes a shared testing sender. Appointment delivery runs in the background: an
 email failure is logged but does not block or roll back a saved appointment. Password-reset requests
 always return a generic response to avoid revealing whether an account exists. Never commit the

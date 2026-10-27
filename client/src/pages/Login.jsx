@@ -7,10 +7,13 @@ import { useAuth } from '../context/AuthContext.jsx'
 export default function Login() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { login } = useAuth()
+  const { login, verifyLoginOtp } = useAuth()
   const [form, setForm] = useState({ email: '', password: '' })
+  const [code, setCode] = useState('')
+  const [otpSent, setOtpSent] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
+  const [infoMessage, setInfoMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isWaitingForServer, setIsWaitingForServer] = useState(false)
 
@@ -21,22 +24,49 @@ export default function Login() {
   async function handleSubmit(event) {
     event.preventDefault()
     setError('')
+    setInfoMessage('')
     setIsWaitingForServer(false)
     setIsSubmitting(true)
 
     try {
-      await login(
+      if (!otpSent) {
+        const result = await login(
+          { email: form.email.trim(), password: form.password },
+          { onWaiting: () => setIsWaitingForServer(true) },
+        )
+        setOtpSent(true)
+        setCode('')
+        setInfoMessage(result.message)
+      } else {
+        await verifyLoginOtp(form.email.trim(), code)
+        const destination = location.state?.from
+        const isInternalDestination =
+          typeof destination === 'string' &&
+          destination.startsWith('/') &&
+          !destination.startsWith('//')
+        navigate(isInternalDestination ? destination : '/profile', { replace: true })
+      }
+    } catch (err) {
+      setError(err.message || 'Unable to sign in right now.')
+    } finally {
+      setIsWaitingForServer(false)
+      setIsSubmitting(false)
+    }
+  }
+
+  async function resendCode() {
+    setError('')
+    setInfoMessage('')
+    setIsSubmitting(true)
+    try {
+      const result = await login(
         { email: form.email.trim(), password: form.password },
         { onWaiting: () => setIsWaitingForServer(true) },
       )
-      const destination = location.state?.from
-      const isInternalDestination =
-        typeof destination === 'string' &&
-        destination.startsWith('/') &&
-        !destination.startsWith('//')
-      navigate(isInternalDestination ? destination : '/profile', { replace: true })
+      setInfoMessage(result.message)
+      setCode('')
     } catch (err) {
-      setError(err.message || 'Unable to sign in right now.')
+      setError(err.message || 'Unable to resend the sign-in code.')
     } finally {
       setIsWaitingForServer(false)
       setIsSubmitting(false)
@@ -82,10 +112,12 @@ export default function Login() {
             Sign in to MediGuide
           </h2>
           <p className="mt-3 text-sm leading-relaxed text-slate-500">
-            Use the email and password associated with your account.
+            {otpSent
+              ? 'Enter the one-time code sent to your email address.'
+              : 'Use the email and password associated with your account.'}
           </p>
 
-          {error && (
+          {error && !otpSent && (
             <div role="alert" className="mt-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
               {error}
             </div>
@@ -102,7 +134,7 @@ export default function Login() {
                 className="mt-1.5 h-2.5 w-2.5 shrink-0 animate-pulse rounded-full bg-brand-600"
               />
               <div>
-                <p className="font-semibold">Signing you in automatically…</p>
+                <p className="font-semibold">Connecting to the server…</p>
                 <p className="mt-1 leading-relaxed text-brand-800">
                   The server was idle and is restarting. Keep this page open; there is no need to press Sign in again.
                 </p>
@@ -110,8 +142,20 @@ export default function Login() {
             </div>
           )}
 
+          {otpSent && infoMessage && (
+            <div role="status" className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+              {infoMessage}
+            </div>
+          )}
+
+          {otpSent && error && (
+            <div role="alert" className="mt-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+              {error}
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="mt-7 space-y-5" aria-busy={isSubmitting}>
-            <div>
+            {!otpSent && <div>
               <label htmlFor="email" className="mb-1.5 block text-sm font-semibold text-slate-700">
                 Email address
               </label>
@@ -127,8 +171,8 @@ export default function Login() {
                 placeholder="you@example.com"
                 className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
               />
-            </div>
-            <div>
+            </div>}
+            {!otpSent && <div>
               <div className="mb-1.5 flex flex-wrap items-center justify-between gap-3">
                 <label htmlFor="password" className="block text-sm font-semibold text-slate-700">
                   Password
@@ -155,14 +199,56 @@ export default function Login() {
                 onChange={update}
                 className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
               />
-            </div>
+            </div>}
+            {otpSent && (
+              <div>
+                <label htmlFor="loginCode" className="mb-1.5 block text-sm font-semibold text-slate-700">
+                  Sign-in code
+                </label>
+                <input
+                  id="loginCode"
+                  name="loginCode"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  pattern="[0-9]{6}"
+                  maxLength={6}
+                  required
+                  value={code}
+                  onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="6-digit code"
+                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-center text-lg tracking-[0.4em] outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+                />
+                <p className="mt-1.5 text-xs text-slate-500">The code expires in 10 minutes.</p>
+              </div>
+            )}
             <button type="submit" disabled={isSubmitting} className="btn-primary w-full py-3">
               {isWaitingForServer
                 ? 'Waiting for server…'
                 : isSubmitting
-                  ? 'Signing in…'
-                  : 'Sign in'}
+                  ? (otpSent ? 'Verifying…' : 'Sending code…')
+                  : (otpSent ? 'Verify and sign in' : 'Continue')}
             </button>
+            {otpSent && (
+              <>
+                <button type="button" disabled={isSubmitting} onClick={resendCode} className="w-full py-2 text-sm font-semibold text-brand-700 hover:text-brand-800">
+                  Send a new code
+                </button>
+                <button
+                  type="button"
+                  disabled={isSubmitting}
+                  onClick={() => {
+                    setOtpSent(false)
+                    setError('')
+                    setInfoMessage('')
+                    setCode('')
+                  }}
+                  className="w-full py-1 text-sm text-slate-500 hover:text-slate-700"
+                >
+                  Use a different account
+                </button>
+              </>
+            )}
           </form>
 
           <p className="mt-6 text-center text-sm text-slate-600">

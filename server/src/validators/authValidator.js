@@ -17,6 +17,15 @@ const password = z
   .string()
   .min(8, "Password must contain at least 8 characters")
   .max(72, "Password must contain no more than 72 characters")
+  .refine((value) => /[A-Z]/.test(value), {
+    message: "Password must contain at least one uppercase letter",
+  })
+  .refine((value) => /\d/.test(value), {
+    message: "Password must contain at least one number",
+  })
+  .refine((value) => /[^A-Za-z0-9]/.test(value), {
+    message: "Password must contain at least one special character",
+  })
   .refine((value) => Buffer.byteLength(value, "utf8") <= 72, {
     message: "Password must contain no more than 72 UTF-8 bytes",
   });
@@ -75,8 +84,9 @@ export const resetPasswordSchema = z.object({
   password,
 }).strict();
 
-export const verifyEmailSchema = z.object({
-  token: z.string().regex(/^[A-Za-z0-9_-]{43}$/, "Verification link is invalid or expired"),
+export const emailOtpSchema = z.object({
+  email,
+  code: z.string().regex(/^\d{6}$/, "Enter the 6-digit code from your email"),
 }).strict();
 
 export const profileSchema = z

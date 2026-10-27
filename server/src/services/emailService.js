@@ -467,8 +467,8 @@ export function isPasswordResetEmailConfigured() {
   return isEmailDeliveryConfigured() && Boolean(getPasswordResetAppUrl());
 }
 
-export function isEmailVerificationConfigured() {
-  return isEmailDeliveryConfigured() && Boolean(getPasswordResetAppUrl());
+export function isEmailOtpConfigured() {
+  return isEmailDeliveryConfigured();
 }
 
 export function getMissingPasswordResetEmailConfiguration() {
@@ -510,21 +510,17 @@ export async function sendPasswordResetEmail({ to, resetUrl, expiresInMinutes })
   });
 }
 
-export async function sendEmailVerificationEmail({ to, verifyUrl, expiresInHours }) {
-  const appUrl = getPasswordResetAppUrl();
-  if (!appUrl) {
-    console.warn(
-      `${LOG_PREFIX} WARNING email verification skipped: APP_URL (or CLIENT_ORIGIN / CLIENT_URL) is not configured.`
-    );
-    return { skipped: true, reason: "missing_APP_URL" };
-  }
-  const safeUrl = escapeHtml(verifyUrl);
-  const html = `<div style="font-family:Arial,sans-serif;max-width:560px;margin:32px auto;padding:32px;border:1px solid #dbe4ef;border-radius:16px;color:#142b4a"><h1 style="color:#1769aa">MediGuide</h1><h2>Verify your email address</h2><p>Confirm this email address to activate your MediGuide account. This link expires in ${expiresInHours} hours.</p><p><a href="${safeUrl}" style="display:inline-block;background:#1769aa;color:white;padding:12px 20px;border-radius:10px;text-decoration:none">Verify email</a></p><p>If you did not create this account, you can ignore this email.</p><p style="font-size:12px;color:#64748b">MediGuide is an educational demo. Use synthetic information only.</p></div>`;
+export async function sendEmailOtp({ to, code, purpose, expiresInMinutes }) {
+  const registration = purpose === "registration";
+  const action = registration ? "activate your MediGuide account" : "sign in to MediGuide";
+  const heading = registration ? "Your registration code" : "Your sign-in code";
+  const subject = registration ? "Your MediGuide registration code" : "Your MediGuide sign-in code";
+  const html = `<div style="font-family:Arial,sans-serif;max-width:560px;margin:32px auto;padding:32px;border:1px solid #dbe4ef;border-radius:16px;color:#142b4a"><h1 style="color:#1769aa">MediGuide</h1><h2>${heading}</h2><p>Use this one-time code to ${action}. It expires in ${expiresInMinutes} minutes.</p><p style="font-size:32px;font-weight:700;letter-spacing:8px;color:#1769aa">${code}</p><p>If you did not request this code, you can ignore this email.</p><p style="font-size:12px;color:#64748b">MediGuide is an educational demo. Use synthetic information only.</p></div>`;
   return sendEmail({
     to,
-    subject: "Verify your MediGuide email address",
+    subject,
     html,
-    text: `Verify your MediGuide email address within ${expiresInHours} hours: ${verifyUrl}\n\nIf you did not create this account, ignore this email.`,
+    text: `Your MediGuide code to ${action} is ${code}. It expires in ${expiresInMinutes} minutes.\n\nIf you did not request this code, ignore this email.`,
   });
 }
 

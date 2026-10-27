@@ -5,6 +5,7 @@ import {
   loginUser as apiLogin,
   logoutUser as apiLogout,
   registerUser as apiRegister,
+  verifyLoginOtp as apiVerifyLoginOtp,
   deleteProfilePhoto as apiDeleteProfilePhoto,
   uploadProfilePhoto as apiUploadProfilePhoto,
   updateUserProfile,
@@ -41,7 +42,11 @@ export function AuthProvider({ children }) {
   }, [refreshUser])
 
   const login = useCallback(async (credentials, options) => {
-    const result = await apiLogin(credentials, options)
+    return apiLogin(credentials, options)
+  }, [])
+
+  const verifyLoginOtp = useCallback(async (email, code) => {
+    const result = await apiVerifyLoginOtp(email, code)
     clearProfilePhotoCache()
     setUser(result.user)
     return result.user
@@ -89,6 +94,7 @@ export function AuthProvider({ children }) {
       user,
       loading,
       login,
+      verifyLoginOtp,
       register,
       logout,
       refreshUser,
@@ -97,7 +103,7 @@ export function AuthProvider({ children }) {
       removeProfilePhoto,
       profilePhotoVersion,
     }),
-    [user, loading, login, register, logout, refreshUser, saveProfile, saveProfilePhoto, removeProfilePhoto, profilePhotoVersion],
+    [user, loading, login, verifyLoginOtp, register, logout, refreshUser, saveProfile, saveProfilePhoto, removeProfilePhoto, profilePhotoVersion],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
