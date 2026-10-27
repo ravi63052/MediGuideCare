@@ -11,22 +11,36 @@ import {
   resetPassword,
   uploadProfilePhoto,
   updateProfile,
+  verifyEmail,
 } from "../controllers/authController.js";
 import { requireAuth } from "../middleware/requireAuth.js";
 import { profilePhotoUpload } from "../middleware/profilePhotoUpload.js";
-import { authRateLimiter, passwordResetCompletionRateLimiter, passwordResetRequestRateLimiter } from "../middleware/rateLimiters.js";
+import {
+  authRateLimiter,
+  emailVerificationRequestRateLimiter,
+  passwordResetCompletionRateLimiter,
+  passwordResetRequestRateLimiter,
+} from "../middleware/rateLimiters.js";
 import {
   loginSchema,
   profileSchema,
   registerSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
+  verifyEmailSchema,
   validateBody,
 } from "../validators/authValidator.js";
 
 const router = express.Router();
 
-router.post("/register", authRateLimiter, validateBody(registerSchema), register);
+router.post(
+  "/register",
+  emailVerificationRequestRateLimiter,
+  authRateLimiter,
+  validateBody(registerSchema),
+  register,
+);
+router.post("/verify-email", validateBody(verifyEmailSchema), verifyEmail);
 router.post("/login", authRateLimiter, validateBody(loginSchema), login);
 router.post("/forgot-password", passwordResetRequestRateLimiter, validateBody(forgotPasswordSchema), requestPasswordReset);
 router.post("/reset-password", passwordResetCompletionRateLimiter, validateBody(resetPasswordSchema), resetPassword);

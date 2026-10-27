@@ -5,10 +5,17 @@ import ProfilePhoto from "../models/ProfilePhoto.js";
 import { clearSession, createSession } from "../utils/session.js";
 import { completePasswordReset, createPasswordResetToken, PASSWORD_RESET_EXPIRY_MS } from "../services/passwordResetService.js";
 import {
+  completeEmailVerification,
+  createEmailVerificationToken,
+  EMAIL_VERIFICATION_EXPIRY_MS,
+} from "../services/emailVerificationService.js";
+import {
   getMissingPasswordResetEmailConfiguration,
   getPasswordResetAppUrl,
+  isEmailVerificationConfigured,
   isPasswordResetEmailConfigured,
   safeEmailProviderFailure,
+  sendEmailVerificationEmail,
   sendPasswordResetEmail,
 } from "../services/emailService.js";
 
@@ -75,19 +82,73 @@ function validateProfilePhoto(file, res) {
 
 export async function register(req, res, next) {
   try {
-    const { fullName, email, password } = req.body;
-    const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
-    const user = await User.create({
-      fullName,
-      email,
-      passwordHash,
-      role: "patient",
-    });
+    if (!isEmailVerificationConfigured()) {
+      return res.status(503).json({
+        message: "Email verification is temporarily unavailable. Please try again later.",
+      });
+    }
 
-    createSession(res, user._id);
-    return res.status(201).json({
-      message: "Account created successfully.",
-      user: publicUser(user),
+    const { fullName, email, password } = req.body;
+    let user = await User.findOne({ email });
+    if (user?.emailVerified) {
+      return res.status(409).json({
+        message: "An account with this email already exists. Try signing in instead.",
+      });
+    }
+
+    const { token, tokenHash } = createEmailVerificationToken();
+    const expiresAt = new Date(Date.now() + EMAIL_VERIFICATION_EXPIRY_MS);
+
+    if (user) {
+      const update = await User.updateOne(
+        { _id: user._id, emailVerified: false },
+        {
+          $set: {
+            emailVerificationTokenHash: tokenHash,
+            emailVerificationExpiresAt: expiresAt,
+          },
+        },
+      );
+      if (update.matchedCount !== 1) {
+        return res.status(409).json({
+          message: "An account with this email already exists. Try signing in instead.",
+        });
+      }
+    } else {
+      const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+      user = await User.create({
+        fullName,
+        email,
+        passwordHash,
+        role: "patient",
+        emailVerified: false,
+        emailVerificationTokenHash: tokenHash,
+        emailVerificationExpiresAt: expiresAt,
+      });
+    }
+
+    const verifyUrl =
+      `${getPasswordResetAppUrl()}/verify-email?token=${encodeURIComponent(token)}`;
+    try {
+      const delivery = await sendEmailVerificationEmail({
+        to: user.email,
+        verifyUrl,
+        expiresInHours: EMAIL_VERIFICATION_EXPIRY_MS / (60 * 60 * 1000),
+      });
+      if (!delivery.accepted) {
+        return res.status(503).json({
+          message: "We could not send the verification email. Please try again later.",
+        });
+      }
+    } catch (error) {
+      console.warn("Email verification delivery failed.", safeEmailProviderFailure(error));
+      return res.status(503).json({
+        message: "We could not send the verification email. Please try again later.",
+      });
+    }
+
+    return res.status(202).json({
+      message: "Check your email for a verification link to activate your account.",
     });
   } catch (error) {
     if (error?.code === 11000) {
@@ -95,6 +156,22 @@ export async function register(req, res, next) {
         message: "An account with this email already exists. Try signing in instead.",
       });
     }
+    return next(error);
+  }
+}
+
+export async function verifyEmail(req, res, next) {
+  try {
+    const user = await completeEmailVerification({ UserModel: User, token: req.body.token });
+    if (!user) {
+      return res.status(400).json({
+        message: "This verification link is invalid or has expired. Register again to request a new link.",
+      });
+    }
+    return res.status(200).json({
+      message: "Email verified successfully. You can now sign in.",
+    });
+  } catch (error) {
     return next(error);
   }
 }
@@ -111,6 +188,11 @@ export async function login(req, res, next) {
     if (!user || !passwordMatches) {
       return res.status(401).json({
         message: "The email address or password is incorrect.",
+      });
+    }
+    if (!user.emailVerified) {
+      return res.status(403).json({
+        message: "Verify your email address using the link we sent before signing in.",
       });
     }
 

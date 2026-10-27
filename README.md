@@ -17,7 +17,7 @@ per-user appointments, medicine lookup, map-based hospital search, and education
 
 ## Features
 
-- Registration, login, logout, session restoration, and single-use password-reset links
+- Email-verified registration, login, logout, session restoration, and single-use password-reset links
 - Public-only auth pages and protected workspace routes
 - Persistent, account-specific profile editing with optional profile photos and workspace avatars
 - Per-user appointment booking/cancellation with active-provider verification and a validated
@@ -64,7 +64,7 @@ records are clearly labelled if used during an outage. For a public deployment, 
 `HOSPITAL_DIRECTORY_USER_AGENT` to a value identifying the project and a contact, in line with
 Nominatim's usage policy.
 
-#### Optional email notifications and password reset
+#### Required email verification and optional email notifications
 
 Email is sent over an HTTPS API because hosts such as Render block outbound SMTP ports.
 Pick a provider with `EMAIL_PROVIDER` and configure the **root `.env`** (not the frontend
@@ -97,14 +97,18 @@ every skipped send; nothing fails silently.
 
 Replace the placeholders with your own values. `MAIL_FROM` must be a sender on the verified domain;
 it cannot be an arbitrary user's email address. `APP_URL` is the public frontend origin used in
-password-reset and appointment-reminder links. If `APP_URL` is omitted, the API uses the first valid
-origin in `CLIENT_ORIGIN` (or `CLIENT_URL`). Set `APP_URL` explicitly when the browser origin differs
-from the CORS origin. Restart the API after changing `.env`.
+email-verification, password-reset, and appointment-reminder links. New accounts remain inactive
+until the user opens the verification email and confirms the link; registration does not create a
+login session before confirmation. Verification links expire after 24 hours. If `APP_URL` is omitted,
+the API uses the first valid origin in `CLIENT_ORIGIN` (or `CLIENT_URL`). Set `APP_URL` explicitly
+when the browser origin differs from the CORS origin. Restart the API after changing `.env`.
 
-Without `RESEND_API_KEY`, email notifications are skipped. All delivery requires `MAIL_FROM`;
-password resets and reminders also require `APP_URL` or a valid frontend-origin fallback. The API
-never substitutes a shared testing sender. Appointment delivery runs in the background: an email
-failure is logged but does not block or roll back a saved appointment. Password-reset requests
+Email verification, password resets, and reminders require the selected provider's API key,
+`MAIL_FROM`, and `APP_URL` or a valid frontend-origin fallback. Registration is unavailable when
+verification email delivery is not configured or the provider does not accept the message. An
+accepted email is not proof that the mailbox exists; only opening the link activates the account.
+The API never substitutes a shared testing sender. Appointment delivery runs in the background: an
+email failure is logged but does not block or roll back a saved appointment. Password-reset requests
 always return a generic response to avoid revealing whether an account exists. Never commit the
 real key or share it in chat.
 

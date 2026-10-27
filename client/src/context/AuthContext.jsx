@@ -48,10 +48,7 @@ export function AuthProvider({ children }) {
   }, [])
 
   const register = useCallback(async (details, options) => {
-    const result = await apiRegister(details, options)
-    clearProfilePhotoCache()
-    setUser(result.user)
-    return result.user
+    return apiRegister(details, options)
   }, [])
 
   const logout = useCallback(async () => {

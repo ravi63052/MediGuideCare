@@ -1,11 +1,10 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 
 import { LogoMark, ShieldCheckIcon, UserIcon } from '../components/icons.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 
 export default function Register() {
-  const navigate = useNavigate()
   const { register } = useAuth()
   const [form, setForm] = useState({
     fullName: '',
@@ -15,6 +14,7 @@ export default function Register() {
   })
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
+  const [verificationMessage, setVerificationMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   function update(event) {
@@ -24,6 +24,7 @@ export default function Register() {
   async function handleSubmit(event) {
     event.preventDefault()
     setError('')
+    setVerificationMessage('')
 
     if (form.password !== form.confirmPassword) {
       setError('Your passwords do not match.')
@@ -36,12 +37,12 @@ export default function Register() {
 
     setIsSubmitting(true)
     try {
-      await register({
+      const result = await register({
         fullName: form.fullName.trim(),
         email: form.email.trim(),
         password: form.password,
       })
-      navigate('/profile', { replace: true })
+      setVerificationMessage(result.message)
     } catch (err) {
       setError(err.message || 'Unable to create your account right now.')
     } finally {
@@ -101,6 +102,15 @@ export default function Register() {
               </div>
             )}
 
+            {verificationMessage ? (
+              <div role="status" className="mt-7 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm leading-relaxed text-emerald-900">
+                <p className="font-semibold">{verificationMessage}</p>
+                <p className="mt-2">
+                  Open the link in that email to verify your address and activate your account.
+                  The link expires in 24 hours.
+                </p>
+              </div>
+            ) : (
             <form onSubmit={handleSubmit} className="mt-7 space-y-4">
               <div>
                 <label htmlFor="fullName" className="mb-1.5 block text-sm font-semibold text-slate-700">
@@ -187,6 +197,7 @@ export default function Register() {
                 {isSubmitting ? 'Creating account…' : 'Create account'}
               </button>
             </form>
+            )}
 
             <p className="mt-6 text-center text-sm text-slate-600">
               Already have an account?{' '}

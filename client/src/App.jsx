@@ -12,6 +12,7 @@ import Hospitals from './pages/Hospitals.jsx'
 import Login from './pages/Login.jsx'
 import ForgotPassword from './pages/ForgotPassword.jsx'
 import ResetPassword from './pages/ResetPassword.jsx'
+import VerifyEmail from './pages/VerifyEmail.jsx'
 import Medicines from './pages/Medicines.jsx'
 import Prescriptions from './pages/Prescriptions.jsx'
 import Profile from './pages/Profile.jsx'
@@ -32,6 +33,7 @@ export default function App() {
             <Route path="register" element={publicAuthPage(<Register />)} />
             <Route path="forgot-password" element={<ForgotPassword />} />
             <Route path="reset-password" element={<ResetPassword />} />
+            <Route path="verify-email" element={<VerifyEmail />} />
           </Route>
 
           <Route

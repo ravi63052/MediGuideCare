@@ -29,6 +29,10 @@ const userSchema = new mongoose.Schema(
       required: true,
       select: false,
     },
+    // Existing accounts stay usable; registration explicitly creates unverified users.
+    emailVerified: { type: Boolean, default: true },
+    emailVerificationTokenHash: { type: String, default: null, select: false },
+    emailVerificationExpiresAt: { type: Date, default: null, select: false },
     passwordResetTokenHash: { type: String, default: null, select: false },
     passwordResetExpiresAt: { type: Date, default: null, select: false },
     role: {

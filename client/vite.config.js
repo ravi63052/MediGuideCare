@@ -10,13 +10,11 @@ export default defineConfig({
     port: 5173,
     // Accept requests forwarded from a tunnel/preview hostname.
     allowedHosts: true,
-    // Proxy API calls to the deployed Node backend so the browser always uses
-    // relative /api URLs. In production the same proxy is defined in
-    // client/vercel.json, which keeps API calls same-origin (no CORS/cookie issues).
+    // Use the local API during development so local code and environment
+    // configuration are exercised. Production uses the Vercel proxy below.
     proxy: {
       '/api': {
-        // Use http://localhost:5000 instead when running the API locally.
-        target: 'https://mediguide-0a1e.onrender.com',
+        target: 'http://localhost:5000',
         changeOrigin: true,
       },
     },
