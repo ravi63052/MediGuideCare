@@ -66,7 +66,8 @@ export const appointmentSchema = z
       .refine(isCalendarDate, "Enter a valid calendar date"),
     time: z
       .string()
-      .regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/, "Time must use 24-hour HH:mm"),
+      .regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/, "Time must use 24-hour HH:mm")
+      .refine((value) => Number(value.slice(3)) % 15 === 0, "Appointment time must use 15-minute increments"),
     timeZone: z.string().trim().min(1).max(80).refine(validateTimeZone, "Select a valid timezone").default("Asia/Kolkata"),
     reason: z.string().trim().max(500).optional(),
   })

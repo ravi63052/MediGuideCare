@@ -16,6 +16,7 @@ import { appointmentDateTimeToUtc } from "./appointmentReminders.js";
  */
 
 export const DEFAULT_APPOINTMENT_DURATION_MINUTES = 30;
+export const APPOINTMENT_CANCELLATION_NOTICE_MINUTES = 60;
 const MAX_APPOINTMENT_DURATION_MINUTES = 480;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -39,6 +40,16 @@ export function getAppointmentEndTime(
 ) {
   const startsAt = appointmentDateTimeToUtc(date, time, timeZone || "Asia/Kolkata");
   return new Date(startsAt.getTime() + durationMinutes * 60_000);
+}
+
+/** True when an appointment starts too soon to be cancelled. */
+export function isWithinCancellationWindow(appointment, now = new Date()) {
+  const startsAt = appointmentDateTimeToUtc(
+    appointment.date,
+    appointment.time,
+    appointment.timeZone || "Asia/Kolkata"
+  );
+  return startsAt.getTime() - now.getTime() < APPOINTMENT_CANCELLATION_NOTICE_MINUTES * 60_000;
 }
 
 /** True when an "Upcoming" appointment has already ended. */

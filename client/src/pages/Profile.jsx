@@ -87,10 +87,11 @@ export default function Profile() {
     setError('')
 
     try {
+      const editableProfile = { ...formData }
+      delete editableProfile.fullName
+      delete editableProfile.email
       await saveProfile({
-        ...formData,
-        fullName: formData.fullName.trim(),
-        email: formData.email.trim(),
+        ...editableProfile,
         allergies: cleanList(formData.allergies),
         medications: cleanList(formData.medications),
       })
@@ -162,6 +163,7 @@ export default function Profile() {
       emergencyAddress: { maxLength: 240 },
     }
     const multiline = name === 'address' || name === 'emergencyAddress'
+    const locked = name === 'fullName' || name === 'email'
 
     return (
       <div className={`profile-field${multiline ? ' profile-field-wide' : ''}`} key={name}>
@@ -185,7 +187,7 @@ export default function Profile() {
               value={formData[name] ?? ''}
               onChange={handleChange}
               required={name === 'fullName' || name === 'email'}
-              disabled={saving}
+              disabled={saving || locked}
               {...constraints[name]}
             />
           )
@@ -193,6 +195,9 @@ export default function Profile() {
           <span className="profile-field-value">
             {name === 'dob' ? formatDate(value) : value || 'Not provided'}
           </span>
+        )}
+        {editing && locked && (
+          <small className="profile-field-hint">This account identifier cannot be changed.</small>
         )}
       </div>
     )

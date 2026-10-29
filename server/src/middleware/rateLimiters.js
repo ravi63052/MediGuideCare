@@ -21,23 +21,23 @@ export const authRateLimiter = rateLimit({
   },
 });
 
-export const emailOtpRequestRateLimiter = rateLimit({
+export const emailRequestRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 5,
   standardHeaders: "draft-8",
   legacyHeaders: false,
   message: {
-    message: "Too many email code requests. Please wait 15 minutes and try again.",
+    message: "Too many email requests. Please wait 15 minutes and try again.",
   },
 });
 
-export const emailOtpVerificationRateLimiter = rateLimit({
+export const emailVerificationRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 10,
   standardHeaders: "draft-8",
   legacyHeaders: false,
   message: {
-    message: "Too many email code attempts. Please wait 15 minutes and try again.",
+    message: "Too many email verification attempts. Please wait 15 minutes and try again.",
   },
 });
 

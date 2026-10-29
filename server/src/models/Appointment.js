@@ -173,6 +173,14 @@ const appointmentSchema = new mongoose.Schema(
 );
 
 appointmentSchema.index({ userId: 1, date: 1, time: 1 });
+appointmentSchema.index(
+  { doctor: 1, date: 1, time: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { status: "Upcoming" },
+    name: "unique_upcoming_doctor_slot",
+  }
+);
 appointmentSchema.index({ status: 1, "reminders.status": 1, "reminders.scheduledAt": 1 });
 // Supports the completion sweep (status + date) and per-user lookups.
 appointmentSchema.index({ status: 1, date: 1 });

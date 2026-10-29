@@ -12,14 +12,14 @@ import {
   uploadProfilePhoto,
   updateProfile,
   verifyLoginOtp,
-  verifyRegistrationOtp,
+  verifyRegistrationEmail,
 } from "../controllers/authController.js";
 import { requireAuth } from "../middleware/requireAuth.js";
 import { profilePhotoUpload } from "../middleware/profilePhotoUpload.js";
 import {
   authRateLimiter,
-  emailOtpRequestRateLimiter,
-  emailOtpVerificationRateLimiter,
+  emailRequestRateLimiter,
+  emailVerificationRateLimiter,
   passwordResetCompletionRateLimiter,
   passwordResetRequestRateLimiter,
 } from "../middleware/rateLimiters.js";
@@ -30,6 +30,7 @@ import {
   forgotPasswordSchema,
   resetPasswordSchema,
   emailOtpSchema,
+  emailVerificationSchema,
   validateBody,
 } from "../validators/authValidator.js";
 
@@ -37,21 +38,21 @@ const router = express.Router();
 
 router.post(
   "/register",
-  emailOtpRequestRateLimiter,
+  emailRequestRateLimiter,
   authRateLimiter,
   validateBody(registerSchema),
   register,
 );
 router.post(
-  "/verify-registration-otp",
-  emailOtpVerificationRateLimiter,
-  validateBody(emailOtpSchema),
-  verifyRegistrationOtp,
+  "/verify-registration-email",
+  emailVerificationRateLimiter,
+  validateBody(emailVerificationSchema),
+  verifyRegistrationEmail,
 );
-router.post("/login", emailOtpRequestRateLimiter, authRateLimiter, validateBody(loginSchema), login);
+router.post("/login", emailRequestRateLimiter, authRateLimiter, validateBody(loginSchema), login);
 router.post(
   "/verify-login-otp",
-  emailOtpVerificationRateLimiter,
+  emailVerificationRateLimiter,
   validateBody(emailOtpSchema),
   verifyLoginOtp,
 );

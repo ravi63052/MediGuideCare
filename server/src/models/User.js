@@ -15,6 +15,7 @@ const userSchema = new mongoose.Schema(
       trim: true,
       minlength: 2,
       maxlength: 80,
+      immutable: true,
     },
     email: {
       type: String,
@@ -23,6 +24,7 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
       maxlength: 254,
+      immutable: true,
     },
     passwordHash: {
       type: String,
@@ -31,6 +33,8 @@ const userSchema = new mongoose.Schema(
     },
     // Existing accounts stay usable; registration explicitly creates unverified users.
     emailVerified: { type: Boolean, default: true },
+    emailVerificationTokenHash: { type: String, default: null, select: false },
+    emailVerificationTokenExpiresAt: { type: Date, default: null, select: false },
     emailOtpHash: { type: String, default: null, select: false },
     emailOtpExpiresAt: { type: Date, default: null, select: false },
     emailOtpPurpose: {

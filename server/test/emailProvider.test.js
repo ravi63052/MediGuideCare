@@ -8,6 +8,7 @@ import {
   getMissingPasswordResetEmailConfiguration,
   isAppointmentReminderEmailConfigured,
   isPasswordResetEmailConfigured,
+  isRegistrationVerificationEmailConfigured,
   logEmailConfiguration,
   parseMailFrom,
   sendEmail,
@@ -100,6 +101,7 @@ test("brevo without an API key is reported as unconfigured, not crashed", () => 
   assert.equal(config.configured, false);
   assert.deepEqual(config.missing, ["BREVO_API_KEY"]);
   assert.equal(isPasswordResetEmailConfigured(), false);
+  assert.equal(isRegistrationVerificationEmailConfigured(), false);
   assert.equal(isAppointmentReminderEmailConfigured(), false);
   assert.deepEqual(getMissingPasswordResetEmailConfiguration(), ["BREVO_API_KEY"]);
 });
@@ -111,6 +113,7 @@ test("switching to brevo stops requiring RESEND_API_KEY", () => {
   process.env.APP_URL = "https://medi-guide-care.vercel.app";
 
   assert.equal(isPasswordResetEmailConfigured(), true);
+  assert.equal(isRegistrationVerificationEmailConfigured(), true);
   assert.equal(isAppointmentReminderEmailConfigured(), true);
   assert.deepEqual(getMissingPasswordResetEmailConfiguration(), []);
 });

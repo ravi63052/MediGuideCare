@@ -702,12 +702,13 @@ export default function Appointments() {
                 <input
                   id="time"
                   type="time"
+                  step="900"
                   value={form.time}
                   onChange={(event) => setForm({ ...form, time: event.target.value })}
                   required
                   disabled={submitting}
                 />
-                <small>Select your preferred time.</small>
+                <small>Choose a time in 15-minute increments. A slot can only be booked once per doctor.</small>
               </div>
             </div>
 
@@ -920,7 +921,10 @@ export default function Appointments() {
               .slice(0, 2)
               .toUpperCase() || 'D'
             const status = resolveAppointmentStatus(appointment)
-            const canCancel = status === 'Upcoming' 
+            const startsAt = getAppointmentEndTime(appointment)
+            const cancellationAllowed = startsAt &&
+              startsAt.getTime() - APPOINTMENT_DURATION_MINUTES * 60_000 - Date.now() >= 60 * 60_000
+            const canCancel = status === 'Upcoming'
             const hospital = appointment.hospital
             const mapUrl = hospitalMapUrl(hospital)
 
@@ -964,11 +968,19 @@ export default function Appointments() {
                     <button
                       className="cancel-appointment-btn"
                       onClick={() => handleCancel(appointment)}
-                      disabled={cancellingId === id}
+                      disabled={cancellingId === id || !cancellationAllowed}
+                      title={!cancellationAllowed
+                        ? 'Appointments cannot be cancelled within 1 hour of their start time.'
+                        : undefined}
                       type="button"
                     >
                       {cancellingId === id ? 'Cancelling…' : 'Cancel'}
                     </button>
+                  )}
+                  {canCancel && !cancellationAllowed && (
+                    <small className="cancellation-window-notice">
+                      Cancellation closes 1 hour before the appointment.
+                    </small>
                   )}
                 </div>
               </article>

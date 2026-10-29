@@ -7,7 +7,10 @@ import {
   sendAppointmentCancellation,
   sendAppointmentConfirmation,
 } from "../services/emailService.js";
-import { completeFinishedAppointments } from "../services/appointmentLifecycle.js";
+import {
+  completeFinishedAppointments,
+  isWithinCancellationWindow,
+} from "../services/appointmentLifecycle.js";
 import { appointmentDateTimeToUtc, buildReminderSchedule, DEFAULT_REMINDER_OFFSETS } from "../services/appointmentReminders.js";
 
 export async function getAppointments(req, res, next) {
@@ -64,7 +67,6 @@ export async function createAppointment(req, res, next) {
     }
 
     const conflict = await Appointment.exists({
-      userId: req.userId,
       doctor: selectedDoctor.name,
       date,
       time,
@@ -72,7 +74,7 @@ export async function createAppointment(req, res, next) {
     });
     if (conflict) {
       return res.status(409).json({
-        message: "You already have this doctor booked at that time.",
+        message: "This doctor already has an appointment at that time. Choose another slot.",
       });
     }
 
@@ -116,6 +118,16 @@ export async function createAppointment(req, res, next) {
       appointment,
     });
   } catch (error) {
+    if (
+      error?.code === 11000 &&
+      error?.keyPattern?.doctor &&
+      error?.keyPattern?.date &&
+      error?.keyPattern?.time
+    ) {
+      return res.status(409).json({
+        message: "This doctor already has an appointment at that time. Choose another slot.",
+      });
+    }
     return next(error);
   }
 }
@@ -124,6 +136,24 @@ export async function cancelAppointment(req, res, next) {
   try {
     if (!mongoose.isValidObjectId(req.params.id)) {
       return res.status(400).json({ message: "Invalid appointment ID." });
+    }
+
+    const existingAppointment = await Appointment.findOne({
+      _id: req.params.id,
+      userId: req.userId,
+      status: "Upcoming",
+    }).select("date time timeZone");
+
+    if (!existingAppointment) {
+      return res.status(404).json({
+        message: "Upcoming appointment not found.",
+      });
+    }
+
+    if (isWithinCancellationWindow(existingAppointment)) {
+      return res.status(409).json({
+        message: "Appointments can only be cancelled at least 1 hour before their start time.",
+      });
     }
 
     const appointment = await Appointment.findOneAndUpdate(

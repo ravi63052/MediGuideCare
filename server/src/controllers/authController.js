@@ -5,18 +5,24 @@ import ProfilePhoto from "../models/ProfilePhoto.js";
 import { clearSession, createSession } from "../utils/session.js";
 import { completePasswordReset, createPasswordResetToken, PASSWORD_RESET_EXPIRY_MS } from "../services/passwordResetService.js";
 import {
-  completeEmailOtp,
   createEmailOtp,
   EMAIL_OTP_EXPIRY_MS,
 } from "../services/emailOtpService.js";
+import {
+  completeRegistrationVerification,
+  createRegistrationVerificationToken,
+  REGISTRATION_VERIFICATION_EXPIRY_MS,
+} from "../services/registrationVerificationService.js";
 import {
   getMissingPasswordResetEmailConfiguration,
   getPasswordResetAppUrl,
   isEmailOtpConfigured,
   isPasswordResetEmailConfigured,
+  isRegistrationVerificationEmailConfigured,
   safeEmailProviderFailure,
   sendEmailOtp,
   sendPasswordResetEmail,
+  sendRegistrationVerificationEmail,
 } from "../services/emailService.js";
 
 const BCRYPT_ROUNDS = 12;
@@ -82,9 +88,9 @@ function validateProfilePhoto(file, res) {
 
 export async function register(req, res, next) {
   try {
-    if (!isEmailOtpConfigured()) {
+    if (!isRegistrationVerificationEmailConfigured()) {
       return res.status(503).json({
-        message: "Email codes are temporarily unavailable. Please try again later.",
+        message: "Email verification is temporarily unavailable. Please try again later.",
       });
     }
 
@@ -96,8 +102,8 @@ export async function register(req, res, next) {
       });
     }
 
-    const { code, codeHash } = await createEmailOtp();
-    const expiresAt = new Date(Date.now() + EMAIL_OTP_EXPIRY_MS);
+    const { token, tokenHash } = createRegistrationVerificationToken();
+    const expiresAt = new Date(Date.now() + REGISTRATION_VERIFICATION_EXPIRY_MS);
 
     if (user) {
       const update = await User.updateOne(
@@ -106,9 +112,11 @@ export async function register(req, res, next) {
           $set: {
             fullName,
             passwordHash: await bcrypt.hash(password, BCRYPT_ROUNDS),
-            emailOtpHash: codeHash,
-            emailOtpExpiresAt: expiresAt,
-            emailOtpPurpose: "registration",
+            emailVerificationTokenHash: tokenHash,
+            emailVerificationTokenExpiresAt: expiresAt,
+            emailOtpHash: null,
+            emailOtpExpiresAt: null,
+            emailOtpPurpose: null,
           },
         },
       );
@@ -125,33 +133,31 @@ export async function register(req, res, next) {
         passwordHash,
         role: "patient",
         emailVerified: false,
-        emailOtpHash: codeHash,
-        emailOtpExpiresAt: expiresAt,
-        emailOtpPurpose: "registration",
+        emailVerificationTokenHash: tokenHash,
+        emailVerificationTokenExpiresAt: expiresAt,
       });
     }
 
     try {
-      const delivery = await sendEmailOtp({
+      const delivery = await sendRegistrationVerificationEmail({
         to: user.email,
-        code,
-        purpose: "registration",
-        expiresInMinutes: EMAIL_OTP_EXPIRY_MS / (60 * 1000),
+        token,
+        expiresInHours: REGISTRATION_VERIFICATION_EXPIRY_MS / (60 * 60 * 1000),
       });
       if (!delivery.accepted) {
         return res.status(503).json({
-          message: "We could not send your registration code. Please try again later.",
+          message: "We could not send your verification link. Please try again later.",
         });
       }
     } catch (error) {
-      console.warn("Registration code delivery failed.", safeEmailProviderFailure(error));
+      console.warn("Registration verification email delivery failed.", safeEmailProviderFailure(error));
       return res.status(503).json({
-        message: "We could not send your registration code. Please try again later.",
+        message: "We could not send your verification link. Please try again later.",
       });
     }
 
     return res.status(202).json({
-      message: "A 6-digit registration code was sent to your email address.",
+      message: "A verification link was sent to your email address. Open it to activate your account.",
     });
   } catch (error) {
     if (error?.code === 11000) {
@@ -163,17 +169,15 @@ export async function register(req, res, next) {
   }
 }
 
-export async function verifyRegistrationOtp(req, res, next) {
+export async function verifyRegistrationEmail(req, res, next) {
   try {
-    const user = await completeEmailOtp({
+    const user = await completeRegistrationVerification({
       UserModel: User,
-      email: req.body.email,
-      code: req.body.code,
-      purpose: "registration",
+      token: req.body.token,
     });
     if (!user) {
       return res.status(400).json({
-        message: "The code is invalid or has expired. Request a new registration code.",
+        message: "This verification link is invalid, expired, or has already been used. Register again to request a new link.",
       });
     }
     return res.status(200).json({
@@ -206,7 +210,7 @@ export async function login(req, res, next) {
     }
     if (!user.emailVerified) {
       return res.status(403).json({
-        message: "Complete registration using the code sent to your email before signing in.",
+        message: "Verify your email using the link sent to your inbox before signing in.",
       });
     }
 
@@ -226,7 +230,6 @@ export async function login(req, res, next) {
       const delivery = await sendEmailOtp({
         to: user.email,
         code,
-        purpose: "login",
         expiresInMinutes: EMAIL_OTP_EXPIRY_MS / (60 * 1000),
       });
       if (!delivery.accepted) {
@@ -255,7 +258,6 @@ export async function verifyLoginOtp(req, res, next) {
       UserModel: User,
       email: req.body.email,
       code: req.body.code,
-      purpose: "login",
     });
     if (!user) {
       return res.status(400).json({

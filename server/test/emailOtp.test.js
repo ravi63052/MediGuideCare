@@ -56,43 +56,6 @@ test("email codes are six digits and are stored only as bcrypt hashes", async ()
   assert.match(second.code, /^\d{6}$/);
 });
 
-test("registration OTP activates once and rejects wrong, expired, or reused codes", async () => {
-  const now = new Date("2026-01-01T00:00:00Z");
-  const { code, codeHash } = await createEmailOtp();
-  const options = {
-    email: "patient@example.com",
-    codeHash,
-    purpose: "registration",
-    expiresAt: new Date(now.getTime() + 1000),
-    emailVerified: false,
-  };
-  const userModel = fakeUserModel(options);
-  const incorrectCode = code === "000000" ? "000001" : "000000";
-
-  assert.equal(
-    await completeEmailOtp({ UserModel: userModel, email: options.email, code: incorrectCode, purpose: "registration", now }),
-    null,
-  );
-  assert.ok(
-    await completeEmailOtp({ UserModel: userModel, email: options.email, code, purpose: "registration", now }),
-  );
-  assert.equal(userModel.state.emailVerified, true);
-  assert.equal(userModel.state.emailOtpHash, null);
-  assert.equal(
-    await completeEmailOtp({ UserModel: userModel, email: options.email, code, purpose: "registration", now }),
-    null,
-  );
-
-  const expired = fakeUserModel({
-    ...options,
-    expiresAt: new Date(now.getTime() - 1),
-  });
-  assert.equal(
-    await completeEmailOtp({ UserModel: expired, email: options.email, code, purpose: "registration", now }),
-    null,
-  );
-});
-
 test("login OTP is single-use and does not change email verification", async () => {
   const now = new Date("2026-01-01T00:00:00Z");
   const { code, codeHash } = await createEmailOtp();
@@ -109,7 +72,6 @@ test("login OTP is single-use and does not change email verification", async () 
       UserModel: userModel,
       email: "patient@example.com",
       code,
-      purpose: "login",
       now,
     }),
   );
@@ -119,7 +81,6 @@ test("login OTP is single-use and does not change email verification", async () 
       UserModel: userModel,
       email: "patient@example.com",
       code,
-      purpose: "login",
       now,
     }),
     null,

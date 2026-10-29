@@ -12,33 +12,31 @@ export async function completeEmailOtp({
   UserModel,
   email,
   code,
-  purpose,
   now = new Date(),
 }) {
   const criteria = {
     email,
-    emailOtpPurpose: purpose,
+    emailOtpPurpose: "login",
     emailOtpExpiresAt: { $gt: now },
-    ...(purpose === "registration" ? { emailVerified: false } : { emailVerified: true }),
+    emailVerified: true,
   };
   const candidate = await UserModel.findOne(criteria).select("+emailOtpHash");
   if (!candidate?.emailOtpHash || !(await bcrypt.compare(code, candidate.emailOtpHash))) {
     return null;
   }
 
-  const updates = {
-    emailOtpHash: null,
-    emailOtpExpiresAt: null,
-    emailOtpPurpose: null,
-  };
-  if (purpose === "registration") updates.emailVerified = true;
-
   return UserModel.findOneAndUpdate(
     {
       ...criteria,
       emailOtpHash: candidate.emailOtpHash,
     },
-    { $set: updates },
+    {
+      $set: {
+        emailOtpHash: null,
+        emailOtpExpiresAt: null,
+        emailOtpPurpose: null,
+      },
+    },
     { new: true, runValidators: true },
   );
 }

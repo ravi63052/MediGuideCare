@@ -754,8 +754,16 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
+  flex-wrap: wrap;
   gap: 12px;
   margin-left: auto;
+}
+
+.cancellation-window-notice {
+  flex-basis: 100%;
+  color: #64748b;
+  font-size: 11px;
+  text-align: right;
 }
 
 .appointment-status {

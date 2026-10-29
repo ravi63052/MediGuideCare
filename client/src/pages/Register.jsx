@@ -4,7 +4,6 @@ import { Link } from 'react-router-dom'
 import { LogoMark, ShieldCheckIcon, UserIcon } from '../components/icons.jsx'
 import PasswordRequirements from '../components/PasswordRequirements.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
-import { verifyRegistrationOtp } from '../api.js'
 import { isPasswordValid } from '../utils/passwordRules.js'
 
 export default function Register() {
@@ -17,9 +16,7 @@ export default function Register() {
   })
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
-  const [otpSent, setOtpSent] = useState(false)
-  const [isVerified, setIsVerified] = useState(false)
-  const [code, setCode] = useState('')
+  const [verificationSent, setVerificationSent] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -33,12 +30,6 @@ export default function Register() {
 
     setIsSubmitting(true)
     try {
-      if (otpSent) {
-        await verifyRegistrationOtp(form.email.trim(), code)
-        setIsVerified(true)
-        return
-      }
-
       if (form.password !== form.confirmPassword) {
         setError('Your passwords do not match.')
         return
@@ -53,18 +44,17 @@ export default function Register() {
         email: form.email.trim(),
         password: form.password,
       })
-      setOtpSent(true)
+      setVerificationSent(true)
       setError('')
-      setCode('')
       setSuccessMessage(result.message)
     } catch (err) {
-      setError(err.message || (otpSent ? 'Unable to verify your email.' : 'Unable to create your account right now.'))
+      setError(err.message || 'Unable to create your account right now.')
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  async function resendCode() {
+  async function resendVerificationLink() {
     setError('')
     setIsSubmitting(true)
     try {
@@ -74,9 +64,9 @@ export default function Register() {
         password: form.password,
       })
       setSuccessMessage(result.message)
-      setCode('')
+      setVerificationSent(true)
     } catch (err) {
-      setError(err.message || 'Unable to resend the registration code.')
+      setError(err.message || 'Unable to resend the verification link.')
     } finally {
       setIsSubmitting(false)
     }
@@ -134,48 +124,22 @@ export default function Register() {
               </div>
             )}
 
-            {isVerified ? (
-              <div role="status" className="mt-7 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm leading-relaxed text-emerald-900">
-                <p className="font-semibold">Email verified and account activated.</p>
-                <p className="mt-2">You can now sign in. A one-time code will be sent to your email.</p>
-                <Link to="/login" className="mt-4 inline-flex font-bold text-brand-700 hover:text-brand-800">
-                  Continue to sign in
-                </Link>
+            {verificationSent ? (
+              <div className="mt-7 space-y-4">
+                <div role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm leading-relaxed text-emerald-900">
+                  <p className="font-semibold">{successMessage}</p>
+                  <p className="mt-2">Check your inbox and open the verification link to activate your account. The link expires in 24 hours.</p>
+                  <p className="mt-2">If you don’t see it, check your spam folder.</p>
+                </div>
+                <button type="button" disabled={isSubmitting} onClick={resendVerificationLink} className="btn-primary w-full py-3">
+                  {isSubmitting ? 'Sending…' : 'Resend verification link'}
+                </button>
+                <button type="button" disabled={isSubmitting} onClick={() => setVerificationSent(false)} className="w-full py-2 text-sm font-semibold text-brand-700 hover:text-brand-800">
+                  Back to registration
+                </button>
               </div>
             ) : (
             <form onSubmit={handleSubmit} className="mt-7 space-y-4">
-              {otpSent ? (
-                <>
-                  <div role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm leading-relaxed text-emerald-900">
-                    <p className="font-semibold">{successMessage}</p>
-                    <p className="mt-1">Enter the 6-digit code. It expires in 10 minutes.</p>
-                  </div>
-                  <label htmlFor="registrationCode" className="block text-sm font-semibold text-slate-700">
-                    Registration code
-                  </label>
-                  <input
-                    id="registrationCode"
-                    name="registrationCode"
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    pattern="[0-9]{6}"
-                    maxLength={6}
-                    required
-                    value={code}
-                    onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
-                    placeholder="6-digit code"
-                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-center text-lg tracking-[0.4em] outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
-                  />
-                  <button type="submit" disabled={isSubmitting} className="btn-primary w-full py-3">
-                    {isSubmitting ? 'Verifying…' : 'Verify code'}
-                  </button>
-                  <button type="button" disabled={isSubmitting} onClick={resendCode} className="w-full py-2 text-sm font-semibold text-brand-700 hover:text-brand-800">
-                    Send a new code
-                  </button>
-                </>
-              ) : (
-                <>
               <div>
                 <label htmlFor="fullName" className="mb-1.5 block text-sm font-semibold text-slate-700">
                   Full name
@@ -257,8 +221,6 @@ export default function Register() {
               <button type="submit" disabled={isSubmitting} className="btn-primary mt-2 w-full py-3">
                 {isSubmitting ? 'Creating account…' : 'Create account'}
               </button>
-                </>
-              )}
             </form>
             )}
 

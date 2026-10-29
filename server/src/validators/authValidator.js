@@ -89,10 +89,12 @@ export const emailOtpSchema = z.object({
   code: z.string().regex(/^\d{6}$/, "Enter the 6-digit code from your email"),
 }).strict();
 
+export const emailVerificationSchema = z.object({
+  token: z.string().regex(/^[A-Za-z0-9_-]{43}$/, "Verification link is invalid or expired"),
+}).strict();
+
 export const profileSchema = z
   .object({
-    fullName: fullName.optional(),
-    email: email.optional(),
     dob: z
       .string()
       .regex(/^(?:\d{4}-\d{2}-\d{2})?$/, "Date of birth must use YYYY-MM-DD")

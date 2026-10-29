@@ -16,6 +16,7 @@ import Medicines from './pages/Medicines.jsx'
 import Prescriptions from './pages/Prescriptions.jsx'
 import Profile from './pages/Profile.jsx'
 import Register from './pages/Register.jsx'
+import VerifyEmail from './pages/VerifyEmail.jsx'
 
 function publicAuthPage(element) {
   return <PublicOnlyRoute>{element}</PublicOnlyRoute>
@@ -30,6 +31,7 @@ export default function App() {
             <Route index element={<Home />} />
             <Route path="login" element={publicAuthPage(<Login />)} />
             <Route path="register" element={publicAuthPage(<Register />)} />
+            <Route path="verify-email" element={<VerifyEmail />} />
             <Route path="forgot-password" element={<ForgotPassword />} />
             <Route path="reset-password" element={<ResetPassword />} />
           </Route>
