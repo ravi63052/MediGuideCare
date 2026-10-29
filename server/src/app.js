@@ -17,6 +17,7 @@ import medicineRoutes from "./routes/medicineRoutes.js";
 import { allowedOrigins, corsMiddleware } from "./middleware/cors.js";
 import { getEmailHealth, logEmailConfiguration } from "./services/emailService.js";
 import { listAllowedOrigins } from "./utils/corsOrigins.js";
+import { parseTrustProxy } from "./utils/trustProxy.js";
 import { validateSessionConfiguration } from "./utils/session.js";
 import { startAppointmentReminderScheduler } from "./services/appointmentReminderScheduler.js";
 import Appointment from "./models/Appointment.js";
@@ -36,18 +37,12 @@ const port = Number(process.env.PORT) || 5000;
 
 // Render/Vercel put the app behind a reverse proxy. Without this, express-rate-limit
 // cannot read the caller's IP and every visitor shares a single rate-limit bucket.
-// Override with TRUST_PROXY when the number of proxy hops changes.
-function parseTrustProxy(value) {
-  const trimmed = String(value ?? "").trim();
-  if (!trimmed) return 1;
-  if (trimmed === "false") return false;
-  if (trimmed === "true") return true;
-
-  const asNumber = Number(trimmed);
-  return Number.isInteger(asNumber) ? asNumber : trimmed;
+// Override with a hop count or trusted proxy list when the deployment requires it.
+const trustProxySetting = process.env.TRUST_PROXY;
+if (String(trustProxySetting ?? "").trim() === "true") {
+  console.warn("TRUST_PROXY=true is unsafe for rate limiting; using one trusted proxy hop instead.");
 }
-
-app.set("trust proxy", parseTrustProxy(process.env.TRUST_PROXY));
+app.set("trust proxy", parseTrustProxy(trustProxySetting));
 
 app.disable("x-powered-by");
 

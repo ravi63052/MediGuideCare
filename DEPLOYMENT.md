@@ -212,8 +212,9 @@ curl -i -X OPTIONS https://mediguide-0a1e.onrender.com/api/auth/register \
 - **Rate limiting:** the API trusts one proxy hop by default (`TRUST_PROXY=1`), which is correct
   for Render. Because the browser reaches the API through the Vercel rewrite, there can be more
   than one hop; `TRUST_PROXY` accepts any hop count or a list (`TRUST_PROXY=2`,
-  `TRUST_PROXY=loopback,linklocal,uniquelocal`). Only *failed* sign-in attempts count towards the
-  20-per-15-minutes budget, so normal registrations never use it up.
+  `TRUST_PROXY=loopback,linklocal,uniquelocal`). Do not set `TRUST_PROXY=true`: it is unsafe
+  for IP-based rate limiting and is treated as one trusted hop. Only *failed* sign-in attempts
+  count towards the 20-per-15-minutes budget, so normal registrations never use it up.
 - **Confirm `vercel.json` is active:** after the first deploy, `/api/health` on the Vercel domain
   must return the API JSON. If it returns Vercel's 404 page, the project's Root Directory is not
   `client`, and the file is not being read.
